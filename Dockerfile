@@ -57,5 +57,7 @@ COPY apache/userdir.conf /etc/apache2/mods-available/userdir.conf
 COPY apache/apache2.conf /etc/apache2/apache2.conf
 COPY apache/apache2.conf.dist /etc/apache2/apache2.conf.dist
 
+RUN echo '<?php phpinfo(); ?>' > /var/www/html/index.php
+
 VOLUME [ "/var/log/http/logs" ]
 EXPOSE 80 443
