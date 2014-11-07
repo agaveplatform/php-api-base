@@ -59,5 +59,16 @@ COPY apache/apache2.conf.dist /etc/apache2/apache2.conf.dist
 
 RUN echo '<?php phpinfo(); ?>' > /var/www/html/index.php
 
+USER root
+
+RUN apt-get update && apt-get install -y supervisor postfix
+
+ADD supervisor/supervisor.conf /etc/supervisor/supervisord.conf
+ADD install.sh /opt/install.sh
+ADD postfix/postfix.sh /opt/postfix.sh
+
+RUN touch /var/log/mail.log
+
 VOLUME [ "/var/log/http/logs" ]
-EXPOSE 80 443
+EXPOSE 80
+CMD /usr/bin/supervisord -c /etc/supervisor/supervisord.conf
