@@ -59,17 +59,17 @@ COPY apache/apache2.conf.dist /etc/apache2/apache2.conf.dist
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN echo '<?php phpinfo(); ?>' > /var/www/html/index.php && \
-    apt-get update && \
-    apt-get -y install libmcrypt-dev libbz2-dev zlib1g-dev supervisor postfix && \
-    docker-php-ext-install zip mcrypt pdo_mysql mysql && \
-    touch /var/log/mail.log && \
-    a2enmod rewrite
+    apt-get -y update && \
+    apt-get -y install libmcrypt-dev libbz2-dev zlib1g-dev mysql-client && \
+    docker-php-ext-install zip mcrypt pdo_mysql mbstring mysql && \
+    a2enmod rewrite && \
+    cp /usr/share/zoneinfo/America/Chicago /etc/localtime
 
-ADD supervisor/supervisor.conf /etc/supervisor/supervisord.conf
-ADD install.sh /opt/install.sh
-ADD postfix/postfix.sh /opt/postfix.sh
+ADD install.sh /docker_entrypoint.sh
 
 VOLUME [ "/var/www/html" ]
-VOLUME [ "/var/log/supervisor" ]
-EXPOSE 80
-CMD /usr/bin/supervisord -c /etc/supervisor/supervisord.conf
+VOLUME [ "/var/log/apache2" ]
+EXPOSE 80 443
+ENTRYPOINT ["/docker_entrypoint.sh"]
+
+CMD ["apache2", "-DFOREGROUND"]
