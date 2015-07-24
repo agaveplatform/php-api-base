@@ -51,10 +51,11 @@ FROM php:5.5-apache
 MAINTAINER Rion Dooley <dooley@tacc.utexas.edu
 
 ENV DEBIAN_FRONTEND noninteractive
+ENV TERM xterm
 RUN pecl install zip && \
     echo '<?php phpinfo(); ?>' > /var/www/html/index.php && \
     apt-get -y update && \
-    apt-get -y install libmcrypt-dev libbz2-dev zlib1g-dev mysql-client && \
+    apt-get -y install libmcrypt-dev libbz2-dev zlib1g-dev mysql-client nano && \
     docker-php-ext-install zip mcrypt pdo_mysql mbstring mysql && \
     a2enmod rewrite && \
     a2enmod ssl && \
