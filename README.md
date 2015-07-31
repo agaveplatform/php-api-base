@@ -1,6 +1,7 @@
 ## Agave PHP API Base Image
 
-This is the base image used to create the Agave PHP API Images. It has Apache2 and PHP 5.5 installed and configured with a custom php.ini and apache config.
+This is the base image used to create the Agave PHP API Images. It has Apache2 and PHP 5.5 installed and configured with a custom php.ini and apache config. Webapps using this image may access a database connection to a [MySQL](https://registry.hub.docker.com/u/library/mysql) or [MariaDB](https://registry.hub.docker.com/u/library/mariadb) container defined in the environment and/or linked at runtime. CORS is already bundled into the apache
+rewrite rules fo the virutal host, so no need to worry about that.
 
 ## What is the Agave Platform?
 
@@ -35,22 +36,29 @@ This image can be used as a base image for all PHP APIs. Simply create a Dockerf
 
 ### Developing with this image
 
-If you are developing with this image, simply mount your code into the `/var/www/html` directory in the container. Your local changes will be reflected instantly when you refresh your page.
+If you are developing with this image, mount your code into the `/var/www/html` directory in the container. Your local changes will be reflected instantly when you refresh your page.
 
 ```
-docker run -p 80:80 -v `pwd`:/var/www/html --name agave-php agaveapi/php-api-base
+docker run -h docker.example.com
+           -p 80:8080 \
+           --name some-api \
+           -v `pwd`:/var/www/html \
+           --link mysql:mysql
+           agaveapi/php-api-base:latest
 ```
+
 
 ### Running in production
 
-When running in production, take advantage of the centralized logging available from Agave's data volume by mounting the container logs into the  data volume. This will provide you persistent logs and, if you are using a db, persistent database content.
+When running in production, both the access and error logs will stream to standard out so they can be access via the Docker logs facility by default.
 
-<pre>
-docker run --name mydata agaveapi/api-data-volume echo "Data volume for my APIs"
-
-docker run -d -e "SERVICE_NAME=my-php-api"      
-           -p 80:80                    \ # HTTP
-           --volumes-from mydata     \ # log to data volume
-           -v /agave/logs/my-php-api:/var/log/apache2 		   --name my-php-api
-           agaveapi/php-api-base
-</pre>
+```
+docker run -h docker.example.com
+           -p 80:80 \
+           --name some-api \
+           -e MYSQL_USERNAME=agaveuser \
+           -e MYSQL_PASSWORD=password \
+           -e MYSQL_HOST=mysql \
+           -e MYSQL_PORT=3306 \
+           agaveapi/php-api-base:latest
+```
