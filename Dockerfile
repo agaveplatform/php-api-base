@@ -21,11 +21,20 @@ ENV TERM xterm
 RUN pecl install zip && \
     echo '<?php phpinfo(); ?>' > /var/www/html/index.php && \
     apt-get -y update && \
-    apt-get -y install libmcrypt-dev libbz2-dev zlib1g-dev mysql-client nano && \
+    apt-get -y install libmcrypt-dev libbz2-dev zlib1g-dev mysql-client vim.tiny wget  && \
+    wget -O - https://download.newrelic.com/548C16BF.gpg | apt-key add -
+
+ADD tcp/limits.conf /etc/security/limits.conf
+ADD tcp/sysctl.conf /etc/sysctl.conf
+
+RUN echo "deb http://apt.newrelic.com/debian/ newrelic non-free" > /etc/apt/sources.list.d/newrelic.list && \
+    apt-get -y install newrelic-php5 && \
     docker-php-ext-install zip mcrypt pdo_mysql mbstring mysql && \
     a2enmod rewrite && \
     a2enmod ssl && \
-    cp /usr/share/zoneinfo/America/Chicago /etc/localtime
+    sysctl -p && \
+    cp /usr/share/zoneinfo/America/Chicago /etc/localtime && \
+    newrelic-install install
 
 ADD php/php.ini /usr/local/lib/
 ADD apache/000-default.conf /etc/apache2/sites-available/000-default.conf

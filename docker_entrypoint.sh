@@ -34,6 +34,11 @@ elif [[ -z "$MYSQL_DATABASE" ]]; then
   MYSQL_DATABASE=agave-api
 fi
 
+if [[ -n "$NEWRELIC_LICENSE_KEY" ]]; then
+  echo "newrelic.license='$NEWRELIC_LICENSE_KEY'" > /var/www/html/newrelic.ini
+  echo "newrelic.appname='$AGAVE_APP_NAME'" > /var/www/html/newrelic.ini
+fi
+
 #
 # if [[ ! -f "/ssl/server.key" ]]; then
 #         mkdir -p /ssl
