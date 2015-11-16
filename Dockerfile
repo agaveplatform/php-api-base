@@ -23,10 +23,13 @@ ADD tcp/sysctl.conf /etc/sysctl.conf
 RUN /usr/sbin/deluser apache && \
     addgroup -g 50 -S apache && \
     adduser -u 1000 -g apache -G apache -S apache && \
-    apk --update add apache2-ssl php-apache2 curl php-cli php-json php-phar php-openssl php-mysql php-pdo vim curl gzip tzdata bash && \
+    apk --update add apache2-ssl php-apache2 curl php-cli php-json php-phar php-openssl php-mysql php-pdo vim curl gzip tzdata ntp bash && \
     rm -f /var/cache/apk/* && \
     echo "Setting system timezone to America/Chicago..." && \
     ln -snf /usr/share/zoneinfo/America/Chicago /etc/localtime && \
+    echo "Setting up ntpd..." && \
+    echo $(setup-ntp -c busybox  2>&1) && \
+    ntpd -d -p pool.ntp.org && \
     echo "Installing composer..." && \
     curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer && \
     mkdir -p /var/www/html && \

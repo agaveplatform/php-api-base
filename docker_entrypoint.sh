@@ -86,4 +86,9 @@ if [[ -n "$SSL_CA_CERT" ]]; then
 fi
 # grep "we_done_switched_the_ca_cert" /etc/apache2/conf.d/ssl.conf
 
+
+# start ntpd because clock skew is astoundingly real
+ntpd -d -p pool.ntp.org
+
+# finally, run the command passed into the container
 exec "$@"
