@@ -1,9 +1,20 @@
 #!/bin/bash
-#
+set -x
+
 if [[ -f "/app/config/environment.sh" ]]; then
   source /app/config/environment.sh
 else
   echo "No environment config present in /app/config/environment.sh. Reading from container environment"
+fi
+
+PHP_ERROR_REPORTING=${PHP_ERROR_REPORTING:-"E_ALL & ~E_DEPRECATED & ~E_NOTICE"}
+echo "error_reporting = $PHP_ERROR_REPORTING" >> /etc/php/php.ini
+
+if [[ -n "$DOCUMENT_ROOT" ]]; then
+  sed -i 's#^DocumentRoot ".*#DocumentRoot "'$DOCUMENT_ROOT'"#g' /etc/apache2/httpd.conf
+  sed -i 's#^<Directory ".*#<Directory "'$DOCUMENT_ROOT'">#g' /etc/apache2/httpd.conf
+else
+  DOCUMENT_ROOT=/var/www/html
 fi
 
 if [[ -z "$MYSQL_HOST" ]]; then
@@ -35,52 +46,45 @@ elif [[ -z "$MYSQL_DATABASE" ]]; then
 fi
 
 if [[ -n "$NEWRELIC_LICENSE_KEY" ]]; then
-  echo "newrelic.license='$NEWRELIC_LICENSE_KEY'" > /var/www/html/newrelic.ini
-  echo "newrelic.appname='$AGAVE_APP_NAME'" > /var/www/html/newrelic.ini
+  if [[ -e /var/www/html/newrelic.ini ]]; then
+    echo "New Relic file already present. Skipping config setup"
+  else
+    echo "newrelic.license='$NEWRELIC_LICENSE_KEY'" > $DOCUMENT_ROOT/newrelic.ini
+
+    if [[ -n "$NEWRELIC_APP_NAME" ]]; then
+      echo "newrelic.appname='$NEWRELIC_APP_NAME'" > $DOCUMENT_ROOT/newrelic.ini
+    fi
+  fi
 fi
 
-#
-# if [[ ! -f "/ssl/server.key" ]]; then
-#         mkdir -p /ssl
-#         KEY=/ssl/server.key
-#         CERT=/ssl/server.crt
-#         DOMAIN=$(hostname)
-#         CSR=/ssl/$DOMAIN.csr
-#         export PASSPHRASE=$(cat /dev/urandom | tr -cd 'a-f0-9' | head -c 16)
-#         SUBJ="
-# C=US
-# ST=Texas
-# O=University of Texas
-# localityName=Austin
-# commonName=$DOMAIN
-# organizationalUnitName=TACC
-# emailAddress=admin@$DOMAIN
-# "
-#         openssl genrsa -des3 -out $KEY -passout env:PASSPHRASE 2048
-#         openssl req -new -batch -subj "$(echo -n "$SUBJ" | tr "\n" "/")" -key $KEY -out $CSR -passin env:PASSPHRASE
-#         cp $KEY $KEY.orig
-#         openssl rsa -in $KEY.orig -out $KEY -passin env:PASSPHRASE
-#         openssl x509 -req -days 365 -in $CSR -signkey $KEY -out $CERT
-# fi
-#
-# #HOSTLINE=$(echo $(ip -f inet addr show eth0 | grep 'inet' | awk '{ print $2 }' | cut -d/ -f1) $(hostname) $(hostname -s))
-# #echo $HOSTLINE >> /etc/hosts
-#
-# # link in the ssl certs at runtime to allow for valid certs to be mounted in a volume
-# ln -s $KEY /etc/ssl/private/server.key
-# ln -s $CERT /etc/ssl/certs/server.crt
-#
-# # if a ca bundle is present, load it and update the ssl.conf file
-# if [[ -e /etc/httpd/ssl/ca-bundle.crt ]]; then
-#   ln -s /ssl/ca-bundle.crt /etc/ssl/certs/server-ca-chain.crt
-#   set -i 's/#SSLCACertificateFile/SSLCACertificateFile/' /etc/apache2/sites-available/default-ssl.conf
-# fi
-#
-# # if a ca cert chain file is present, load it and update the ssl.conf file
-# if [[ -e /etc/httpd/ssl/ca-chain.crt ]]; then
-#   ln -s /ssl/ca-chain.crt  /etc/ssl/certs/server-ca-chain.crt
-#   set -i 's/#SSLCertificateChainFile/SSLCertificateChainFile/' /etc/apache2/sites-available/default-ssl.conf
+# if [[ -e /etc/apache2/conf.d/ssl.conf.bak ]]; then
+#   cp /etc/apache2/conf.d/ssl.conf.bak /etc/apache2/conf.d/ssl.conf
+# else
+#   cp /etc/apache2/conf.d/ssl.conf /etc/apache2/conf.d/ssl.conf.bak
 # fi
 
-#service rsyslog start
+#export SSL_CERT=we_done_switched_the_ssl_cert
+if [[ -n "$SSL_CERT" ]]; then
+  sed -i 's#^SSLCertificateFile .*#SSLCertificateFile '$SSL_CERT'#g' /etc/apache2/conf.d/ssl.conf
+fi
+#grep "we_done_switched_the_ssl_cert" /etc/apache2/conf.d/ssl.conf
+
+# export SSL_KEY=we_done_switched_the_ssl_key
+if [[ -n "$SSL_KEY" ]]; then
+  sed -i 's#^SSLCertificateKeyFile .*#SSLCertificateKeyFile '$SSL_KEY'#g' /etc/apache2/conf.d/ssl.conf
+fi
+# grep "we_done_switched_the_ssl_key" /etc/apache2/conf.d/ssl.conf
+
+# export SSL_CA_CHAIN=we_done_switched_the_cert_chain
+if [[ -n "$SSL_CA_CHAIN" ]]; then
+  sed -i 's#^\#SSLCertificateChainFile .*#SSLCertificateChainFile '$SSL_CA_CHAIN'#g' /etc/apache2/conf.d/ssl.conf
+fi
+# grep "we_done_switched_the_cert_chain" /etc/apache2/conf.d/ssl.conf
+
+# export SSL_CA_CERT=we_done_switched_the_ca_cert
+if [[ -n "$SSL_CA_CERT" ]]; then
+  sed -i 's#^\#SSLCACertificateFile .*#SSLCACertificateFile '$SSL_CA_CERT'#g' /etc/apache2/conf.d/ssl.conf
+fi
+# grep "we_done_switched_the_ca_cert" /etc/apache2/conf.d/ssl.conf
+
 exec "$@"

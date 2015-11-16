@@ -40,10 +40,23 @@ If you are developing with this image, mount your code into the `/var/www/html` 
 
 ```
 docker run -h docker.example.com
-           -p 80:8080 \
-           --name some-api \
+           -p 80:80 \
+           --name apache \
            -v `pwd`:/var/www/html \
            --link mysql:mysql
+           -e DOCUMENT_ROOT=/var/www/html
+           agaveapi/php-api-base:latest
+```
+
+Alternatively, you can specify a different web root if needed by your application. For example, if you had a Laravel project where the project `composer.json` file was located at `/usr/local/src/laravel/composer.json`, the following would start the container with the proper web root for the project.
+
+```
+docker run -h docker.example.com
+           -p 80:80 \
+           --name apache \
+           -v /usr/local/src/laravel:/var/www \
+           --link mysql:mysql
+           -e DOCUMENT_ROOT=/var/www/public
            agaveapi/php-api-base:latest
 ```
 
@@ -53,12 +66,33 @@ docker run -h docker.example.com
 When running in production, both the access and error logs will stream to standard out so they can be access via the Docker logs facility by default.
 
 ```
-docker run -h docker.example.com
+docker run -h docker.example.com \
            -p 80:80 \
-           --name some-api \
+           -p 443:443 \
+           --name apache \
            -e MYSQL_USERNAME=agaveuser \
            -e MYSQL_PASSWORD=password \
            -e MYSQL_HOST=mysql \
            -e MYSQL_PORT=3306 \
+           agaveapi/php-api-base:latest
+```
+
+### SSL Support
+
+To add ssl support, volume mount your ssl cert, key, ca cert file, and ca chain file as needed. In the following example, a folder containing the necessary files is volume mounted to /ssl in the container.
+
+```
+docker run -h docker.example.com \
+           -p 80:80 \
+           -p 443:443 \
+           --name apache \
+           -e MYSQL_USERNAME=agaveuser \
+           -e MYSQL_PASSWORD=password \
+           -e MYSQL_HOST=mysql \
+           -e MYSQL_PORT=3306 \
+           -v `pwd`/ssl:/ssl \
+           -e SSL_CERT=/ssl/docker_example_com_cert.cer \
+           -e SSL_KEY=/ssl/docker.example.com.key \
+           -e SSL_CA_CERT=/ssl/docker_example_com.cer \
            agaveapi/php-api-base:latest
 ```
