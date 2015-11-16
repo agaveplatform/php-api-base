@@ -1,5 +1,4 @@
 #!/bin/bash
-set -x
 
 if [[ -f "/app/config/environment.sh" ]]; then
   source /app/config/environment.sh
