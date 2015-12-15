@@ -36,11 +36,16 @@ RUN /usr/sbin/deluser apache && \
     echo "<?php phpinfo(); ?>" > /var/www/html/index.php && \
     chown -R apache:apache /var/www/html && \
     echo "Setting document root to /var/www/html..." && \
-    sed -i 's#^DocumentRoot ".*#DocumentRoot "/var/www/html"#g' /etc/apache2/httpd.conf && \
-    sed -i 's#^<Directory ".*#<Directory "/var/www/html">#g' /etc/apache2/httpd.conf && \
+    sed -i 's#/var/www/localhost/htdocs#/var/www/html#g' /etc/apache2/httpd.conf && \
+    sed -i 's#^LogFormat "%h#LogFormat "[%{UNIQUE_ID}i] %h#g' /etc/apache2/httpd.conf && \
+    sed -i 's#LogLevel warn#LogLevel info#g' /etc/apache2/httpd.conf && \
+    sed -i 's#^ErrorLog logs/error.log#ErrorLog /proc/self/fd/2#g' /etc/apache2/httpd.conf && \
+    sed -i 's#^CustomLog logs/access.log combined#CustomLog /proc/self/fd/1 combined#g' /etc/apache2/httpd.conf && \
     sed -i 's#^SSLMutex .*#Mutex sysvsem default#g' /etc/apache2/conf.d/ssl.conf && \
-    echo "Enabling htaccess rewrites..." && \
-    sed -i 's#AllowOverride none#AllowOverride All#' /etc/apache2/httpd.conf
+    sed -i 's#^ErrorLog logs/ssl_error.log#ErrorLog /proc/self/fd/2#g' /etc/apache2/conf.d/ssl.conf && \
+    sed -i 's#^TransferLog logs/ssl_access.log#TransferLog /proc/self/fd/1#g' /etc/apache2/conf.d/ssl.conf && \
+    sed -i 's#^CustomLog logs/ssl_request.log#CustomLog /proc/self/fd/1#g' /etc/apache2/conf.d/ssl.conf && \
+    sed -i 's#LogLevel warn#LogLevel info#g' /etc/apache2/conf.d/ssl.conf
 
 # Uncomment for bind util with host, dig, etc ~140MB
 #RUN apk add -U alpine-sdk linux-headers \
@@ -68,7 +73,6 @@ ADD docker_entrypoint.sh /docker_entrypoint.sh
 WORKDIR /var/www/html
 
 VOLUME [ "/var/www/html" ]
-VOLUME [ "/var/log/apache2" ]
 VOLUME [ "/var/log/newrelic" ]
 
 EXPOSE 80 443

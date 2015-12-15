@@ -1,7 +1,6 @@
 ## Agave PHP API Base Image
 
-This is the base image used to create the Agave PHP API Images. It has Apache2 and PHP 5.5 installed and configured with a custom php.ini and apache config. Webapps using this image may access a database connection to a [MySQL](https://registry.hub.docker.com/u/library/mysql) or [MariaDB](https://registry.hub.docker.com/u/library/mariadb) container defined in the environment and/or linked at runtime. CORS is already bundled into the apache
-rewrite rules fo the virutal host, so no need to worry about that.
+This is the base image used to create the Agave PHP API Images. It has Apache2 and PHP 5.6 installed and configured with a custom php.ini and apache config. Webapps using this image may access a database connection to a [MySQL](https://registry.hub.docker.com/u/library/mysql) or [MariaDB](https://registry.hub.docker.com/u/library/mariadb) container defined in the environment and/or linked at runtime.
 
 ## What is the Agave Platform?
 
@@ -45,7 +44,7 @@ docker run -h docker.example.com
            -v `pwd`:/var/www/html \
            --link mysql:mysql
            -e DOCUMENT_ROOT=/var/www/html
-           agaveapi/php-api-base:latest
+           agaveapi/php-api-base:alpine
 ```
 
 Alternatively, you can specify a different web root if needed by your application. For example, if you had a Laravel project where the project `composer.json` file was located at `/usr/local/src/laravel/composer.json`, the following would start the container with the proper web root for the project.
@@ -57,7 +56,7 @@ docker run -h docker.example.com
            -v /usr/local/src/laravel:/var/www \
            --link mysql:mysql
            -e DOCUMENT_ROOT=/var/www/public
-           agaveapi/php-api-base:latest
+           agaveapi/php-api-base:alpine
 ```
 
 
@@ -74,7 +73,7 @@ docker run -h docker.example.com \
            -e MYSQL_PASSWORD=password \
            -e MYSQL_HOST=mysql \
            -e MYSQL_PORT=3306 \
-           agaveapi/php-api-base:latest
+           agaveapi/php-api-base:alpine
 ```
 
 ### SSL Support
@@ -94,5 +93,5 @@ docker run -h docker.example.com \
            -e SSL_CERT=/ssl/docker_example_com_cert.cer \
            -e SSL_KEY=/ssl/docker.example.com.key \
            -e SSL_CA_CERT=/ssl/docker_example_com.cer \
-           agaveapi/php-api-base:latest
+           agaveapi/php-api-base:alpine
 ```

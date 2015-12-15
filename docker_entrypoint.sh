@@ -10,8 +10,7 @@ PHP_ERROR_REPORTING=${PHP_ERROR_REPORTING:-"E_ALL & ~E_DEPRECATED & ~E_NOTICE"}
 echo "error_reporting = $PHP_ERROR_REPORTING" >> /etc/php/php.ini
 
 if [[ -n "$DOCUMENT_ROOT" ]]; then
-  sed -i 's#^DocumentRoot ".*#DocumentRoot "'$DOCUMENT_ROOT'"#g' /etc/apache2/httpd.conf
-  sed -i 's#^<Directory ".*#<Directory "'$DOCUMENT_ROOT'">#g' /etc/apache2/httpd.conf
+  sed -i 's#/var/www/html#'$DOCUMENT_ROOT'#g' /etc/apache2/httpd.conf
 else
   DOCUMENT_ROOT=/var/www/html
 fi
