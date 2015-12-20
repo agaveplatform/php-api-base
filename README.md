@@ -89,7 +89,7 @@ docker run -h docker.example.com \
            -e MYSQL_PASSWORD=password \
            -e MYSQL_HOST=mysql \
            -e MYSQL_PORT=3306 \
-           -v `pwd`/ssl:/ssl \
+           -v `pwd`/ssl:/ssl:ro \
            -e SSL_CERT=/ssl/docker_example_com_cert.cer \
            -e SSL_KEY=/ssl/docker.example.com.key \
            -e SSL_CA_CERT=/ssl/docker_example_com.cer \
