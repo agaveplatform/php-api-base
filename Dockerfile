@@ -23,7 +23,7 @@ ADD tcp/sysctl.conf /etc/sysctl.conf
 RUN /usr/sbin/deluser apache && \
     addgroup -g 50 -S apache && \
     adduser -u 1000 -g apache -G apache -S apache && \
-    apk --update add apache2-ssl php-apache2 curl php-cli php-json php-phar php-openssl php-mysql php-pdo php-zip php-curl php-mysqli php-gd php-iconv php-zlib vim curl gzip tzdata bash && \
+    apk --update add apache2-ssl apache2-proxy php-apache2 curl php-cli php-json php-phar php-openssl php-mysql php-pdo php-zip php-curl php-mysqli php-gd php-iconv php-zlib vim curl gzip tzdata bash && \
     rm -f /var/cache/apk/* && \
     echo "Setting system timezone to America/Chicago..." && \
     ln -snf /usr/share/zoneinfo/America/Chicago /etc/localtime && \
@@ -39,12 +39,12 @@ RUN /usr/sbin/deluser apache && \
     sed -i 's#/var/www/localhost/htdocs#/var/www/html#g' /etc/apache2/httpd.conf && \
     sed -i 's#^LogFormat "%h#LogFormat "[%{UNIQUE_ID}i] %h#g' /etc/apache2/httpd.conf && \
     sed -i 's#LogLevel warn#LogLevel info#g' /etc/apache2/httpd.conf && \
-    sed -i 's#^ErrorLog logs/error.log#ErrorLog /proc/self/fd/2#g' /etc/apache2/httpd.conf && \
-    sed -i 's#^CustomLog logs/access.log combined#CustomLog /proc/self/fd/1 combined#g' /etc/apache2/httpd.conf && \
+    #sed -i 's#^ErrorLog logs/error.log#ErrorLog /proc/self/fd/2#g' /etc/apache2/httpd.conf && \
+    #sed -i 's#^CustomLog logs/access.log combined#CustomLog /proc/self/fd/1 combined#g' /etc/apache2/httpd.conf && \
     sed -i 's#^SSLMutex .*#Mutex sysvsem default#g' /etc/apache2/conf.d/ssl.conf && \
-    sed -i 's#^ErrorLog logs/ssl_error.log#ErrorLog /proc/self/fd/2#g' /etc/apache2/conf.d/ssl.conf && \
-    sed -i 's#^TransferLog logs/ssl_access.log#TransferLog /proc/self/fd/1#g' /etc/apache2/conf.d/ssl.conf && \
-    sed -i 's#^CustomLog logs/ssl_request.log#CustomLog /proc/self/fd/1#g' /etc/apache2/conf.d/ssl.conf && \
+    #sed -i 's#^ErrorLog logs/ssl_error.log#ErrorLog /proc/self/fd/2#g' /etc/apache2/conf.d/ssl.conf && \
+    #sed -i 's#^TransferLog logs/ssl_access.log#TransferLog /proc/self/fd/1#g' /etc/apache2/conf.d/ssl.conf && \
+    #sed -i 's#^CustomLog logs/ssl_request.log#CustomLog /proc/self/fd/1#g' /etc/apache2/conf.d/ssl.conf && \
     sed -i 's#LogLevel warn#LogLevel info#g' /etc/apache2/conf.d/ssl.conf
 
 # Uncomment for bind util with host, dig, etc ~140MB
