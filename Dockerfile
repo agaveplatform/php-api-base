@@ -23,29 +23,60 @@ ADD tcp/sysctl.conf /etc/sysctl.conf
 RUN /usr/sbin/deluser apache && \
     addgroup -g 50 -S apache && \
     adduser -u 1000 -g apache -G apache -S apache && \
-    apk --update add apache2-ssl apache2-proxy php-apache2 curl php-cli php-json php-phar php-openssl php-mysql php-pdo php-zip php-curl php-mysqli php-gd php-iconv php-zlib vim curl gzip tzdata bash && \
+    apk --update add apache2-ssl apache2-proxy php-apache2 curl php-cli php-json php-phar php-openssl php-mysql php-pdo php-zip php-curl php-mysqli php-gd php-iconv php-zlib php-ctype php-xml php-dom php-opcache vim curl gzip tzdata bash ssmtp && \
     rm -f /var/cache/apk/* && \
+
+    # Set up system timezone and ntpd
     echo "Setting system timezone to America/Chicago..." && \
     ln -snf /usr/share/zoneinfo/America/Chicago /etc/localtime && \
     echo "Setting up ntpd..." && \
     echo $(setup-ntp -c busybox  2>&1) && \
     ntpd -d -p pool.ntp.org && \
+
+    # Parameterize SSMTP mail so php mail will work out of the box using the environment variables provided at runtiem
+    sed -ri -e 's/^(mailhub=).*/\1%%SMTP_HUB%%/' -e 's/^#(FromLineOverride)/\1/' /etc/ssmtp/ssmtp.conf && \
+    { \
+      echo "AuthUser=%%SMTP_USER%%"; \
+      echo "AuthPass=%%SMTP_PASSWORD%%"; \
+      echo "UseSTARTTLS=YES"; \
+    } >> /etc/ssmtp/ssmtp.conf && \
+
+    # Configure PHP opcache
+    { \
+  		echo 'opcache.memory_consumption=128'; \
+  		echo 'opcache.interned_strings_buffer=8'; \
+  		echo 'opcache.max_accelerated_files=4000'; \
+  		echo 'opcache.revalidate_freq=60'; \
+  		echo 'opcache.fast_shutdown=1'; \
+  		echo 'opcache.enable_cli=1'; \
+  	} > /etc/php/conf.d/opcache-recommended.ini && \
+
+    # Install PHP Composer
     echo "Installing composer..." && \
     curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer && \
+
+    # Configure Apache DocumentRoot
+    echo "Setting document root to /var/www/html..." && \
     mkdir -p /var/www/html && \
     echo "<?php phpinfo(); ?>" > /var/www/html/index.php && \
     chown -R apache:apache /var/www/html && \
-    echo "Setting document root to /var/www/html..." && \
     sed -i 's#/var/www/localhost/htdocs#/var/www/html#g' /etc/apache2/httpd.conf && \
+
+    # Add custom log format with unique id passed in all agave sessions
     sed -i 's#^LogFormat "%h#LogFormat "[%{UNIQUE_ID}i] %h#g' /etc/apache2/httpd.conf && \
+
+    # Custom Apache http settings. (Uncomment to print all logs to stdout)
+    # sed -i 's#^ErrorLog logs/error.log#ErrorLog /proc/self/fd/2#g' /etc/apache2/httpd.conf && \
+    # sed -i 's#^CustomLog logs/access.log combined#CustomLog /proc/self/fd/1 combined#g' /etc/apache2/httpd.conf && \
     sed -i 's#LogLevel warn#LogLevel info#g' /etc/apache2/httpd.conf && \
-    #sed -i 's#^ErrorLog logs/error.log#ErrorLog /proc/self/fd/2#g' /etc/apache2/httpd.conf && \
-    #sed -i 's#^CustomLog logs/access.log combined#CustomLog /proc/self/fd/1 combined#g' /etc/apache2/httpd.conf && \
+
+    # Custom Apache ssl settings. (Uncomment to print all logs to stdout)
+    # sed -i 's#^ErrorLog logs/ssl_error.log#ErrorLog /proc/self/fd/2#g' /etc/apache2/conf.d/ssl.conf && \
+    # sed -i 's#^TransferLog logs/ssl_access.log#TransferLog /proc/self/fd/1#g' /etc/apache2/conf.d/ssl.conf && \
+    # sed -i 's#^CustomLog logs/ssl_request.log#CustomLog /proc/self/fd/1#g' /etc/apache2/conf.d/ssl.conf && \
     sed -i 's#^SSLMutex .*#Mutex sysvsem default#g' /etc/apache2/conf.d/ssl.conf && \
-    #sed -i 's#^ErrorLog logs/ssl_error.log#ErrorLog /proc/self/fd/2#g' /etc/apache2/conf.d/ssl.conf && \
-    #sed -i 's#^TransferLog logs/ssl_access.log#TransferLog /proc/self/fd/1#g' /etc/apache2/conf.d/ssl.conf && \
-    #sed -i 's#^CustomLog logs/ssl_request.log#CustomLog /proc/self/fd/1#g' /etc/apache2/conf.d/ssl.conf && \
     sed -i 's#LogLevel warn#LogLevel info#g' /etc/apache2/conf.d/ssl.conf
+
 
 # Uncomment for bind util with host, dig, etc ~140MB
 #RUN apk add -U alpine-sdk linux-headers \
@@ -73,7 +104,6 @@ ADD docker_entrypoint.sh /docker_entrypoint.sh
 WORKDIR /var/www/html
 
 VOLUME [ "/var/www/html" ]
-VOLUME [ "/var/log/newrelic" ]
 
 EXPOSE 80 443
 

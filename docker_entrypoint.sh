@@ -6,6 +6,14 @@ else
   echo "No environment config present in /app/config/environment.sh. Reading from container environment"
 fi
 
+####################################################################
+#
+# Apache Configuration
+#
+# Configure Apache log, debug, and document root settings with
+# values provided in the environment.
+####################################################################
+
 PHP_ERROR_REPORTING=${PHP_ERROR_REPORTING:-"E_ALL & ~E_DEPRECATED & ~E_NOTICE"}
 echo "error_reporting = $PHP_ERROR_REPORTING" >> /etc/php/php.ini
 
@@ -14,6 +22,15 @@ if [[ -n "$DOCUMENT_ROOT" ]]; then
 else
   DOCUMENT_ROOT=/var/www/html
 fi
+
+####################################################################
+#
+# MYSQL Configuration
+#
+# Configure MYSQL connection settings at runtime with any SSL certs
+# provided in the environment. This _should_ pick up any linked
+# containers by default.
+####################################################################
 
 if [[ -z "$MYSQL_HOST" ]]; then
   MYSQL_HOST=mysql
@@ -55,11 +72,13 @@ if [[ -n "$NEWRELIC_LICENSE_KEY" ]]; then
   fi
 fi
 
-# if [[ -e /etc/apache2/conf.d/ssl.conf.bak ]]; then
-#   cp /etc/apache2/conf.d/ssl.conf.bak /etc/apache2/conf.d/ssl.conf
-# else
-#   cp /etc/apache2/conf.d/ssl.conf /etc/apache2/conf.d/ssl.conf.bak
-# fi
+####################################################################
+#
+# SSL Configuration
+#
+# Configure SSL at runtime with any SSL certs provided in the
+# environment
+####################################################################
 
 #export SSL_CERT=we_done_switched_the_ssl_cert
 if [[ -n "$SSL_CERT" ]]; then
@@ -85,12 +104,67 @@ if [[ -n "$SSL_CA_CERT" ]]; then
 fi
 # grep "we_done_switched_the_ca_cert" /etc/apache2/conf.d/ssl.conf
 
+
+####################################################################
+#
+# Email Configuration
+#
+# No email server is present in the environment, so we use SSMTP
+# to provide an email solution to PHP applications relying on the
+# `mail()` function. Here we configure it with settings from the
+# runtime environment.
+# ####################################################################
+
+if [[ -z "${SMTP_HUB}" ]]; then
+  SMTP_HUB='smtp.sendgrid.net:587'
+fi
+sed -ri -e "s/%%SMTP_HUB%%/$SMTP_HUB/" /etc/ssmtp/ssmtp.conf
+
+if [[ -z "${SMTP_USER}" ]]; then
+  SMTP_USER=''
+fi
+sed -ri -e "s/%%SMTP_USER%%/$SMTP_USER/" /etc/ssmtp/ssmtp.conf
+
+if [[ -z "${SMTP_TLS}" ]]; then
+  SMTP_TLS='NO'
+else
+  SMTP_TLS='YES'
+fi
+sed -ri -e "s/UseSTARTTLS=$SMTP_TLS/UseSTARTTLS=NO/" /etc/ssmtp/ssmtp.conf
+
+if [[ -z "${SMTP_PASSWORD}" ]]; then
+  SMTP_PASSWORD=''
+fi
+sed -ri -e "s/%%SMTP_PASSWORD%%/$SMTP_PASSWORD/" /etc/ssmtp/ssmtp.conf
+
+if [[ -z "${SMTP_FROM_ADDRESS}" ]]; then
+  echo "root:$SMTP_FROM_ADDRESS:$SMTP_HUB" >> /etc/ssmtp/revaliases
+  echo "apache:$SMTP_FROM_ADDRESS:$SMTP_HUB" >> /etc/ssmtp/revaliases
+  echo "admin:$SMTP_FROM_ADDRESS:$SMTP_HUB" >> /etc/ssmtp/revaliases
+fi
+
+####################################################################
+#
+# Filesystem Configuration
+#
+# Create any log, temp, or other application specific directories
+# needed which may not be present at runtime.
+#####################################################################
+
 # create the scratch directory
 if [[ -z "$IPLANT_SERVER_TEMP_DIR" ]]; then
 	IPLANT_SERVER_TEMP_DIR=/scratch
 fi
 
 mkdir -p "$IPLANT_SERVER_TEMP_DIR"
+
+####################################################################
+#
+# Synchronization and Service Discovery
+#
+# Make sure the system clock is up to data and provide any discovery
+# functions needed to initialize the environment or application.
+#####################################################################
 
 # start ntpd because clock skew is astoundingly real
 ntpd -d -p pool.ntp.org

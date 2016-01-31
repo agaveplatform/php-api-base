@@ -95,3 +95,36 @@ docker run -h docker.example.com \
            -e SSL_CA_CERT=/ssl/docker_example_com.cer \
            agaveapi/php-api-base:alpine
 ```
+
+### Email Server
+
+There is no embedded mail server in this image. In order to use the PHP `mail()` command, you will need to configure a SMTP relay server through your environment.
+
+Variable | Description
+----------|----------|------------
+| SMTP_HUB | Hostname and port of the SMTP relay server. ex. `"smtp.sendgrid.net:587"` |
+| SMTP_USER | Account username used to authenticate to the SMTP relay |
+| SMTP_PASSWORD | Account password used to authenticate to the SMTP relay |
+| SMTP_FROM_ADDRESS | Email address used in the *from* field ex. `noreply@example.com` |
+| SMTP_TLS | `1` if TLS should be used, `0` otherwise. Default is `1` |
+
+```
+docker run -h docker.example.com \
+           -p 80:80 \
+           -p 443:443 \
+           --name apache \
+           -e MYSQL_USERNAME=agaveuser \
+           -e MYSQL_PASSWORD=password \
+           -e MYSQL_HOST=mysql \
+           -e MYSQL_PORT=3306 \
+           -v `pwd`/ssl:/ssl:ro \
+           -e SMTP_TLS=1 \
+           -e SSL_CERT=/ssl/docker_example_com_cert.cer \
+           -e SSL_KEY=/ssl/docker.example.com.key \
+           -e SSL_CA_CERT=/ssl/docker_example_com.cer \
+           -e SMTP_HUB="smtp.sendgrid.net:587" \
+           -e SMTP_USER=username \
+           -e SMTP_PASSWORD=password \
+           -e SMTP_FROM_ADDRESS="noreply@example.com" \
+           agaveapi/php-api-base:alpine
+```
