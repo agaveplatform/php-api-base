@@ -23,7 +23,7 @@ ADD tcp/sysctl.conf /etc/sysctl.conf
 RUN /usr/sbin/deluser apache && \
     addgroup -g 50 -S apache && \
     adduser -u 1000 -g apache -G apache -S apache && \
-    apk --update add apache2-ssl apache2-proxy php-apache2 curl php-cli php-json php-phar php-openssl php-mysql php-pdo php-zip php-curl php-mysqli php-gd php-iconv php-zlib php-ctype php-xml php-dom php-opcache vim curl gzip tzdata bash ssmtp && \
+    apk --update add apache2-ssl apache2-proxy php-apache2 curl php-cli php-json php-phar php-openssl php-mysql php-pdo php-zip php-curl php-mysqli php-gd php-iconv php-zlib php-ctype php-xml php-dom php-opcache php-mcrypt php-pdo_mysql vim curl gzip tzdata bash ssmtp && \
     rm -f /var/cache/apk/* && \
 
     # Set up system timezone and ntpd
