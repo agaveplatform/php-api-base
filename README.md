@@ -128,3 +128,9 @@ docker run -h docker.example.com \
            -e SMTP_FROM_ADDRESS="noreply@example.com" \
            agaveapi/php-api-base:alpine
 ```
+
+### Logging
+
+All apache access and error logs are written to /var/log/apache2 by default. You man access them by mounting the folder as a host volume. You can optionally consolidate and stream logs to STDOUT by setting the environment variable `LOG_TARGET_STDOUT` to any truthy value.
+
+The default log level is `INFO`. You can alter the log level by setting any of the following environment variables to a truthy value: `LOG_LEVEL_INFO`, `LOG_LEVEL_WARN`, `LOG_LEVEL_ERROR`, and `LOG_LEVEL_DEBUG`.

@@ -14,25 +14,28 @@
 #
 ######################################################
 
-FROM alpine:3.2
+FROM agaveapi/httpd:2.4
 MAINTAINER Rion Dooley <dooley@tacc.utexas.edu
 
 ADD tcp/limits.conf /etc/security/limits.conf
 ADD tcp/sysctl.conf /etc/sysctl.conf
 
-RUN /usr/sbin/deluser apache && \
-    addgroup -g 50 -S apache && \
-    adduser -u 1000 -g apache -G apache -S apache && \
-    apk --update add apache2-ssl apache2-proxy php-apache2 curl php-cli php-json php-phar php-openssl php-mysql php-pdo php-zip php-curl php-mysqli php-gd php-iconv php-zlib php-ctype php-xml php-dom php-opcache php-mcrypt php-pdo_mysql vim curl gzip tzdata bash ssmtp && \
+# RUN /usr/sbin/deluser apache && \
+#     addgroup -g 50 -S apache && \
+#     adduser -u 1000 -g apache -G apache -S apache && \
+RUN \
+    echo "Installing php and dependencies..." && \
+    apk --update add apache2-ssl apache2-proxy php-apache2 curl php-cli php-json php-phar php-openssl php-mysql php-pdo php-zip php-curl php-mysqli php-gd php-iconv php-zlib php-ctype php-xml php-dom php-opcache php-mcrypt php-pdo_mysql vim curl gzip ssmtp && \
     rm -f /var/cache/apk/* && \
+#
+#     # Set up system timezone and ntpd
+#     echo "Setting system timezone to America/Chicago..." && \
+#     ln -snf /usr/share/zoneinfo/America/Chicago /etc/localtime && \
+#     echo "Setting up ntpd..." && \
+#     echo $(setup-ntp -c busybox  2>&1) && \
+#     ntpd -d -p pool.ntp.org && \
 
-    # Set up system timezone and ntpd
-    echo "Setting system timezone to America/Chicago..." && \
-    ln -snf /usr/share/zoneinfo/America/Chicago /etc/localtime && \
-    echo "Setting up ntpd..." && \
-    echo $(setup-ntp -c busybox  2>&1) && \
-    ntpd -d -p pool.ntp.org && \
-
+    echo "Installing and configuring ssmtp..." && \
     # Parameterize SSMTP mail so php mail will work out of the box using the environment variables provided at runtiem
     sed -ri -e 's/^(mailhub=).*/\1%%SMTP_HUB%%/' -e 's/^#(FromLineOverride)/\1/' /etc/ssmtp/ssmtp.conf && \
     { \
@@ -41,6 +44,7 @@ RUN /usr/sbin/deluser apache && \
       echo "UseSTARTTLS=YES"; \
     } >> /etc/ssmtp/ssmtp.conf && \
 
+    echo "Installing and configuring opcache..." && \
     # Configure PHP opcache
     { \
   		echo 'opcache.memory_consumption=128'; \
@@ -55,27 +59,12 @@ RUN /usr/sbin/deluser apache && \
     echo "Installing composer..." && \
     curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer && \
 
-    # Configure Apache DocumentRoot
-    echo "Setting document root to /var/www/html..." && \
-    mkdir -p /var/www/html && \
+    # Updating apache defaults for php
+    sed -i 's#DirectoryIndex index.html#DirectoryIndex index.php index.html#' /etc/apache2/httpd.conf && \
     echo "<?php phpinfo(); ?>" > /var/www/html/index.php && \
-    chown -R apache:apache /var/www/html && \
-    sed -i 's#/var/www/localhost/htdocs#/var/www/html#g' /etc/apache2/httpd.conf && \
 
     # Add custom log format with unique id passed in all agave sessions
-    sed -i 's#^LogFormat "%h#LogFormat "[%{UNIQUE_ID}i] %h#g' /etc/apache2/httpd.conf && \
-
-    # Custom Apache http settings. (Uncomment to print all logs to stdout)
-    # sed -i 's#^ErrorLog logs/error.log#ErrorLog /proc/self/fd/2#g' /etc/apache2/httpd.conf && \
-    # sed -i 's#^CustomLog logs/access.log combined#CustomLog /proc/self/fd/1 combined#g' /etc/apache2/httpd.conf && \
-    sed -i 's#LogLevel warn#LogLevel info#g' /etc/apache2/httpd.conf && \
-
-    # Custom Apache ssl settings. (Uncomment to print all logs to stdout)
-    # sed -i 's#^ErrorLog logs/ssl_error.log#ErrorLog /proc/self/fd/2#g' /etc/apache2/conf.d/ssl.conf && \
-    # sed -i 's#^TransferLog logs/ssl_access.log#TransferLog /proc/self/fd/1#g' /etc/apache2/conf.d/ssl.conf && \
-    # sed -i 's#^CustomLog logs/ssl_request.log#CustomLog /proc/self/fd/1#g' /etc/apache2/conf.d/ssl.conf && \
-    sed -i 's#^SSLMutex .*#Mutex sysvsem default#g' /etc/apache2/conf.d/ssl.conf && \
-    sed -i 's#LogLevel warn#LogLevel info#g' /etc/apache2/conf.d/ssl.conf
+    sed -i 's#LogFormat "%h#LogFormat "[%{UNIQUE_ID}i] %{CONTAINER_STACK}e %h#g' /etc/apache2/httpd.conf
 
 
 # Uncomment for bind util with host, dig, etc ~140MB
@@ -109,4 +98,4 @@ EXPOSE 80 443
 
 ENTRYPOINT ["/docker_entrypoint.sh"]
 
-CMD ["/usr/sbin/apachectl", "-DFOREGROUND"]
+CMD ["httpd", "-DFOREGROUND"]

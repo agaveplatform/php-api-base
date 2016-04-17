@@ -17,11 +17,37 @@ fi
 PHP_ERROR_REPORTING=${PHP_ERROR_REPORTING:-"E_ALL & ~E_DEPRECATED & ~E_NOTICE"}
 echo "error_reporting = $PHP_ERROR_REPORTING" >> /etc/php/php.ini
 
-if [[ -n "$DOCUMENT_ROOT" ]]; then
-  sed -i 's#/var/www/html#'$DOCUMENT_ROOT'#g' /etc/apache2/httpd.conf
-else
+# Set document root for this container
+if [[ -z "$DOCUMENT_ROOT" ]]; then
   DOCUMENT_ROOT=/var/www/html
 fi
+sed -i 's#%DOCUMENT_ROOT%#'$DOCUMENT_ROOT'#g' /etc/apache2/httpd.conf
+sed -i 's#%DOCUMENT_ROOT%#'$DOCUMENT_ROOT'#g' /etc/apache2/conf.d/ssl.conf
+
+sed -i 's#%HOSTNAME%#'$HOSTNAME'#g' /etc/apache2/httpd.conf
+sed -i 's#%HOSTNAME%#'$HOSTNAME'#g' /etc/apache2/conf.d/ssl.conf
+
+# Enable logging to std out
+if [[ -n "$LOG_TARGET_STDOUT" ]]; then
+  sed -i 's#logs/error_log#/proc/self/fd/2#g' /etc/apache2/httpd.conf
+  sed -i 's#logs/access_log#/proc/self/fd/1#g' /etc/apache2/httpd.conf
+  sed -i 's#logs/ssl_error_log#/proc/self/fd/2#g' /etc/apache2/conf.d/ssl.conf
+  sed -i 's#logs/ssl_access_log#/proc/self/fd/1#g' /etc/apache2/conf.d/ssl.conf
+fi
+
+# Enable toggling the log level at startup
+if [[ -n "$LOG_LEVEL_DEBUG" ]]; then
+  LOG_LEVEL=debug
+elif [[ -n "$LOG_LEVEL_WARN" ]]; then
+  LOG_LEVEL=warn
+elif [[ -n "$LOG_LEVEL_ERROR" ]]; then
+  LOG_LEVEL=error
+else
+  LOG_LEVEL=info
+fi
+
+sed -i 's#%LOG_LEVEL%#'$LOG_LEVEL'#g' /etc/apache2/httpd.conf
+sed -i 's#%LOG_LEVEL%#'$LOG_LEVEL'#g' /etc/apache2/conf.d/ssl.conf
 
 ####################################################################
 #
@@ -59,6 +85,7 @@ if [[ -n "$MYSQL_ENV_MYSQL_DATABASE" ]]; then
 elif [[ -z "$MYSQL_DATABASE" ]]; then
   MYSQL_DATABASE=agave-api
 fi
+echo "Updating container mysql connection to ${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE}..."
 
 if [[ -n "$NEWRELIC_LICENSE_KEY" ]]; then
   if [[ -e /var/www/html/newrelic.ini ]]; then
@@ -80,29 +107,41 @@ fi
 # environment
 ####################################################################
 
-#export SSL_CERT=we_done_switched_the_ssl_cert
+# echo "Creating SSL keys for secure communcation..."
+# if [[ -z "$SSL_KEY" ]]; then
+# 	export KEY=/etc/ssl/apache2/server.key
+# 	export DOMAIN=$(hostname)
+# 	export PASSPHRASE=$(cat /dev/urandom | tr -cd 'a-f0-9' | head -c 16)
+# 	export SUBJ="
+# C=US
+# ST=Texas
+# O=University of Texas
+# localityName=Austin
+# commonName=$DOMAIN
+# organizationalUnitName=TACC
+# emailAddress=admin@$DOMAIN"
+# 	openssl genrsa -des3 -out /etc/ssl/apache2/server.key -passout env:PASSPHRASE 2048
+# 	openssl req -new -batch -subj "$(echo -n "$SUBJ" | tr "\n" "/")" -key $KEY -out /etc/ssl/apache2/$DOMAIN.csr -passin env:PASSPHRASE
+# 	cp $KEY $KEY.orig
+# 	openssl rsa -in $KEY.orig -out $KEY -passin env:PASSPHRASE
+# 	openssl x509 -req -days 365 -in /etc/ssl/apache2/$DOMAIN.csr -signkey $KEY -out /etc/ssl/apache2/server.pem
+# fi
+
 if [[ -n "$SSL_CERT" ]]; then
   sed -i 's#^SSLCertificateFile .*#SSLCertificateFile '$SSL_CERT'#g' /etc/apache2/conf.d/ssl.conf
 fi
-#grep "we_done_switched_the_ssl_cert" /etc/apache2/conf.d/ssl.conf
 
-# export SSL_KEY=we_done_switched_the_ssl_key
 if [[ -n "$SSL_KEY" ]]; then
   sed -i 's#^SSLCertificateKeyFile .*#SSLCertificateKeyFile '$SSL_KEY'#g' /etc/apache2/conf.d/ssl.conf
 fi
-# grep "we_done_switched_the_ssl_key" /etc/apache2/conf.d/ssl.conf
 
-# export SSL_CA_CHAIN=we_done_switched_the_cert_chain
 if [[ -n "$SSL_CA_CHAIN" ]]; then
   sed -i 's#^\#SSLCertificateChainFile .*#SSLCertificateChainFile '$SSL_CA_CHAIN'#g' /etc/apache2/conf.d/ssl.conf
 fi
-# grep "we_done_switched_the_cert_chain" /etc/apache2/conf.d/ssl.conf
 
-# export SSL_CA_CERT=we_done_switched_the_ca_cert
 if [[ -n "$SSL_CA_CERT" ]]; then
   sed -i 's#^\#SSLCACertificateFile .*#SSLCACertificateFile '$SSL_CA_CERT'#g' /etc/apache2/conf.d/ssl.conf
 fi
-# grep "we_done_switched_the_ca_cert" /etc/apache2/conf.d/ssl.conf
 
 
 ####################################################################
@@ -167,7 +206,7 @@ mkdir -p "$IPLANT_SERVER_TEMP_DIR"
 #####################################################################
 
 # start ntpd because clock skew is astoundingly real
-ntpd -d -p pool.ntp.org
+ntpd -d -p pool.ntp.org &
 
 # finally, run the command passed into the container
 exec "$@"
