@@ -52,7 +52,7 @@ RUN \
   		echo 'opcache.max_accelerated_files=4000'; \
   		echo 'opcache.revalidate_freq=60'; \
   		echo 'opcache.fast_shutdown=1'; \
-  		echo 'opcache.enable_cli=1'; \
+  		echo 'opcache.enable_cli=0'; \
   	} > /etc/php/conf.d/opcache-recommended.ini && \
 
     # Install PHP Composer
@@ -64,7 +64,14 @@ RUN \
     echo "<?php phpinfo(); ?>" > /var/www/html/index.php && \
 
     # Add custom log format with unique id passed in all agave sessions
-    sed -i 's#LogFormat "%h#LogFormat "[%{UNIQUE_ID}i] %{CONTAINER_STACK}e %h#g' /etc/apache2/httpd.conf
+    sed -i 's#LogFormat "%h#LogFormat "[%{UNIQUE_ID}i] %{CONTAINER_STACK}e %h#g' /etc/apache2/httpd.conf && \
+
+    # bump max cookie size to avoid issues with firefox
+    echo "#" >> /etc/apache2/conf.d/default.conf && \
+    echo "# Limit on maximum size of an HTTP request header field" >> /etc/apache2/conf.d/default.conf && \
+    echo "#" >> /etc/apache2/conf.d/default.conf && \
+    echo "LimitRequestFieldSize 16380" >> /etc/apache2/conf.d/default.conf
+
 
 
 # Uncomment for bind util with host, dig, etc ~140MB
@@ -91,8 +98,6 @@ ADD php/php.ini /etc/php/php.ini
 ADD docker_entrypoint.sh /docker_entrypoint.sh
 
 WORKDIR /var/www/html
-
-VOLUME [ "/var/www/html" ]
 
 EXPOSE 80 443
 

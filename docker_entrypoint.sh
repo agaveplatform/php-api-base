@@ -31,8 +31,8 @@ sed -i 's#%HOSTNAME%#'$HOSTNAME'#g' /etc/apache2/conf.d/ssl.conf
 if [[ -n "$LOG_TARGET_STDOUT" ]]; then
   sed -i 's#logs/error_log#/proc/self/fd/2#g' /etc/apache2/httpd.conf
   sed -i 's#logs/access_log#/proc/self/fd/1#g' /etc/apache2/httpd.conf
-  sed -i 's#logs/ssl_error_log#/proc/self/fd/2#g' /etc/apache2/conf.d/ssl.conf
-  sed -i 's#logs/ssl_access_log#/proc/self/fd/1#g' /etc/apache2/conf.d/ssl.conf
+  sed -i 's#/var/log/apache2/ssl_access_log#/proc/self/fd/1#g' /etc/apache2/conf.d/ssl.conf
+  sed -i 's#/var/log/apache2/ssl_error_log#/proc/self/fd/2#g' /etc/apache2/conf.d/ssl.conf
 fi
 
 # Enable toggling the log level at startup
